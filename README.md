@@ -46,7 +46,3 @@ A collection of 5 n8n automation workflows built for lead generation, data scrap
 - All workflows include rate limiting to prevent API throttling
 
 
-
-**Built by:** Njeri Ngugi  
-**Role:** Executive Assistant & Automation Specialist  
-**Contact:** njrngugi@gmail.com
