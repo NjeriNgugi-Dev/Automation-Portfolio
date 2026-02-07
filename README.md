@@ -7,7 +7,7 @@ A collection of 5 n8n automation workflows built for lead generation, data scrap
 
 | Workflow | Purpose | Output |
 |----------|---------|--------|
-| GitHub Developer Finder | Lead generation | Qualified developer contacts |
+| GitHub Developer Finder | Lead generation | software developer contacts |
 | Real Estate Scraper | Data collection | Agency database |
 | Law Firm Scraper | B2B prospecting | Legal industry leads |
 | Booking Agent | Auto-scheduling | Automated appointments |
@@ -55,7 +55,7 @@ A collection of 5 n8n automation workflows built for lead generation, data scrap
 **Output:** Instant customer responses and reduced support workload
 
 ---
-## 🛠️ Tech Stack
+## Tech Stack
 - n8n (workflow automation)
 - GitHub API, Google Calendar, ChatGPT/Claude
 - Web scraping, JSON parsing, data enrichment
