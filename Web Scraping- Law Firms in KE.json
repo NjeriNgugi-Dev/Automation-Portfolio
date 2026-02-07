@@ -1,0 +1,276 @@
+{
+  "name": "Web Scraping- Law Firms in KE",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -144
+      ],
+      "id": "489a5062-50fd-4d37-a530-48abb2d1799b",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://www.lawfirmsinafrica.com/countrylawfirms/KE",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -368,
+        -144
+      ],
+      "id": "a566aadb-c7d7-4e56-9e96-6a817e05bbe5",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Regex-based extraction for n8n\nconst html = $input.item.json.data || $input.item.json.html || $input.item.json.body;\n\nconst lawFirms = [];\n\n// Split by law firm entries\nconst firmBlocks = html.split('<li class=\"bg-white shadow-md rounded-lg overflow-hidden list-none relative\">');\n\nfor (let i = 1; i < firmBlocks.length; i++) {\n  const block = firmBlocks[i];\n  \n  // Skip ads\n  if (block.includes('adsbygoogle')) continue;\n  \n  // Extract name and profile URL\n  const nameMatch = block.match(/<h2 class=\"text-xl font-semibold text-gray-800\"><a href=\"([^\"]+)\">([^<]+)<\\/a><\\/h2>/);\n  const name = nameMatch ? nameMatch[2].trim().replace(/&amp;/g, '&').replace(/&#039;/g, \"'\") : '';\n  const profileUrl = nameMatch ? nameMatch[1] : '';\n  \n  // Extract phone from WhatsApp link\n  const phoneMatch = block.match(/phone=([^&\"]+)/);\n  const phoneNumber = phoneMatch ? phoneMatch[1] : '';\n  \n  // Extract WhatsApp link\n  const whatsappMatch = block.match(/href=\"(https:\\/\\/api\\.whatsapp\\.com[^\"]+)\"/);\n  const whatsappLink = whatsappMatch ? whatsappMatch[1] : '';\n  \n  // Extract location (full address)\n  const locationMatch = block.match(/<p class=\"text-gray-600 text-sm mt-1\">\\s*([^<]+)/);\n  let location = locationMatch ? locationMatch[1].trim() : '';\n  // Remove extra whitespace and newlines\n  location = location.replace(/\\s+/g, ' ').trim();\n  \n  // Extract city\n  const cityMatch = block.match(/citylawfirms\\/[^\"]+\">([^<]+)\\s*<\\/a>/);\n  const city = cityMatch ? cityMatch[1].trim() : '';\n  \n  // Extract description\n  const descMatch = block.match(/<p class=\"text-gray-700 text-sm mt-2\">\\s*([^<]+)/);\n  let description = descMatch ? descMatch[1].trim() : '';\n  // Clean up description\n  description = description.replace(/&amp;/g, '&').replace(/&#039;/g, \"'\").replace(/\\s+/g, ' ').trim();\n  \n  // Extract logo URL\n  const logoMatch = block.match(/src=\"([^\"]+)\"\\s+alt=\"[^\"]*Logo\"/);\n  const logoUrl = logoMatch ? logoMatch[1] : '';\n  \n  // Only add if we have a name (valid entry)\n  if (name) {\n    lawFirms.push({\n      firmName: name,\n      profileUrl: profileUrl ? `https://www.lawfirmsinafrica.com${profileUrl}` : '',\n      phoneNumber: phoneNumber,\n      location: location,\n      city: city,\n      description: description,\n      logoUrl: logoUrl,\n      whatsappLink: whatsappLink,\n      source: 'lawfirmsinafrica.com',\n      extractedDate: new Date().toISOString()\n    });\n  }\n}\n\nreturn lawFirms.map(firm => ({ json: firm }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        -144
+      ],
+      "id": "974b34f9-6c79-4335-8c13-1d55716508c4",
+      "name": "Extract Basic Law Firm Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Clean and structure the extracted data\nconst items = $input.all();\n\nconst enrichedData = items.map(item => {\n  const firm = item.json;\n  \n  // Clean phone number - remove all spaces and special characters except +\n  let cleanPhone = '';\n  if (firm.phoneNumber) {\n    cleanPhone = firm.phoneNumber.replace(/\\s+/g, '').replace(/-/g, '');\n  }\n  \n  // Parse location into components\n  let address = '';\n  let neighborhood = '';\n  \n  if (firm.location) {\n    // Split by comma and clean\n    const locationParts = firm.location.split(',').map(s => s.trim()).filter(s => s);\n    \n    if (locationParts.length > 0) {\n      address = locationParts[0];\n    }\n    if (locationParts.length > 2) {\n      neighborhood = locationParts[locationParts.length - 2];\n    } else if (locationParts.length === 2) {\n      neighborhood = locationParts[0];\n    }\n  }\n  \n  // Extract firm ID from URL\n  let firmId = '';\n  if (firm.profileUrl) {\n    const idMatch = firm.profileUrl.match(/\\/lawfirm\\/(\\d+)-/);\n    if (idMatch) {\n      firmId = idMatch[1];\n    }\n  }\n  \n  // Extract firm slug from URL\n  let firmSlug = '';\n  if (firm.profileUrl) {\n    const slugMatch = firm.profileUrl.match(/\\/lawfirm\\/\\d+-(.+)$/);\n    if (slugMatch) {\n      firmSlug = slugMatch[1];\n    }\n  }\n  \n  // Truncate description for preview\n  const descriptionPreview = firm.description && firm.description.length > 200 \n    ? firm.description.substring(0, 200) + '...' \n    : firm.description;\n  \n  // Format phone for display\n  const phoneDisplay = cleanPhone.replace(/(\\+\\d{3})(\\d{3})(\\d{3})(\\d{3})/, '$1 $2 $3 $4');\n  \n  return {\n    json: {\n      // Core Information\n      firmId: firmId,\n      firmSlug: firmSlug,\n      firmName: firm.firmName,\n      \n      // Contact Information\n      phoneNumber: cleanPhone,\n      phoneNumberFormatted: phoneDisplay,\n      whatsappAvailable: !!firm.whatsappLink,\n      whatsappLink: firm.whatsappLink,\n      \n      // Location Details\n      fullAddress: firm.location,\n      streetAddress: address,\n      neighborhood: neighborhood,\n      city: firm.city,\n      country: 'Kenya',\n      \n      // Online Presence\n      profileUrl: firm.profileUrl,\n      logoUrl: firm.logoUrl,\n      \n      // Business Information\n      descriptionShort: descriptionPreview,\n      descriptionFull: firm.description,\n      \n      // Metadata\n      source: firm.source,\n      extractedDate: firm.extractedDate,\n      \n      // Lead Scoring Flags\n      hasPhone: !!cleanPhone,\n      hasWhatsApp: !!firm.whatsappLink,\n      hasLogo: !!firm.logoUrl && !firm.logoUrl.includes('/storage/01') && !firm.logoUrl.endsWith('/storage'),\n      hasDescription: !!firm.description && firm.description.length > 50\n    }\n  };\n});\n\nreturn enrichedData;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -144
+      ],
+      "id": "61604eaa-5950-4eb1-95de-02f9b0541ecb",
+      "name": "Clean and Enrich Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter valid leads and add categorization\nconst items = $input.all();\n\nconst categorizedLeads = items\n  .filter(item => {\n    const firm = item.json;\n    // Only keep firms with at least a name and phone number\n    return firm.firmName && firm.hasPhone;\n  })\n  .map(item => {\n    const firm = item.json;\n    \n    // Categorize by location\n    let locationType = 'Other';\n    const fullLocation = (firm.fullAddress || '') + ' ' + (firm.city || '');\n    \n    const nairobiKeywords = ['Nairobi', 'Westlands', 'Kilimani', 'Upper Hill', 'CBD', 'Lavington', 'Parklands', 'Upperhill'];\n    const mombasaKeywords = ['Mombasa', 'Nyali', 'Diani', 'Watamu'];\n    const nakuruKeywords = ['Nakuru'];\n    const kisumuKeywords = ['Kisumu'];\n    const eldoretKeywords = ['Eldoret'];\n    \n    if (nairobiKeywords.some(keyword => fullLocation.includes(keyword))) {\n      locationType = 'Nairobi';\n    } else if (mombasaKeywords.some(keyword => fullLocation.includes(keyword))) {\n      locationType = 'Mombasa';\n    } else if (nakuruKeywords.some(keyword => fullLocation.includes(keyword))) {\n      locationType = 'Nakuru';\n    } else if (kisumuKeywords.some(keyword => fullLocation.includes(keyword))) {\n      locationType = 'Kisumu';\n    } else if (eldoretKeywords.some(keyword => fullLocation.includes(keyword))) {\n      locationType = 'Eldoret';\n    }\n    \n    // Calculate lead score (0-100)\n    let leadScore = 0;\n    if (firm.hasPhone) leadScore += 30;\n    if (firm.hasWhatsApp) leadScore += 20;\n    if (firm.hasLogo) leadScore += 15;\n    if (firm.hasDescription) leadScore += 20;\n    if (firm.profileUrl) leadScore += 15;\n    \n    // Lead quality assessment\n    let leadQuality = 'Low';\n    if (leadScore >= 70) leadQuality = 'High';\n    else if (leadScore >= 50) leadQuality = 'Medium';\n    \n    // Determine firm size based on description\n    let estimatedSize = 'Unknown';\n    const desc = firm.descriptionFull.toLowerCase();\n    if (desc.includes('full-service') || desc.includes('leading') || desc.includes('premier')) {\n      estimatedSize = 'Large';\n    } else if (desc.includes('medium') || desc.includes('dynamic')) {\n      estimatedSize = 'Medium';\n    } else if (desc.includes('boutique') || desc.includes('specialized')) {\n      estimatedSize = 'Small/Boutique';\n    }\n    \n    return {\n      json: {\n        ...firm,\n        \n        // Categorization\n        locationType: locationType,\n        estimatedSize: estimatedSize,\n        \n        // Lead Scoring\n        leadScore: leadScore,\n        leadQuality: leadQuality,\n        \n        // Priority flags\n        isPriority: leadScore >= 70 && locationType === 'Nairobi',\n        isWhatsAppLead: firm.hasWhatsApp,\n        \n        // Ready for outreach\n        readyForOutreach: firm.hasPhone && firm.hasWhatsApp\n      }\n    };\n  });\n\nreturn categorizedLeads;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        -144
+      ],
+      "id": "f1567b83-f747-4a76-875a-2e5b10544970",
+      "name": "Filter and Categorise Leads"
+    },
+    {
+      "parameters": {
+        "content": "Only use Regex based extraction in n8n. Not Cheerio or jsdom or Domparser\n",
+        "height": 112,
+        "width": 150
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -80,
+        -304
+      ],
+      "typeVersion": 1,
+      "id": "2fddd08c-6609-43dd-94a8-e9e18c6cdcd6",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1wMNKaSbyuL5fGriTnDdVU5zTtvPzlcUhPxv_OMthphM",
+          "mode": "list",
+          "cachedResultName": "Law Firms in KE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wMNKaSbyuL5fGriTnDdVU5zTtvPzlcUhPxv_OMthphM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wMNKaSbyuL5fGriTnDdVU5zTtvPzlcUhPxv_OMthphM/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Firm Name": "={{ $json.firmName }}",
+            "Phone Number": "={{ $json.phoneNumber }}",
+            "Full Address": "={{ $json.fullAddress }}",
+            "Profile URL": "={{ $json.profileUrl }}",
+            "Short description": "={{ $json.descriptionShort }}",
+            "City": "={{ $json.locationType }}",
+            "Whatsapp Link": "={{ $json.whatsappLink }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Firm Name",
+              "displayName": "Firm Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Whatsapp Link",
+              "displayName": "Whatsapp Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Full Address",
+              "displayName": "Full Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Profile URL",
+              "displayName": "Profile URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Short description",
+              "displayName": "Short description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        160,
+        112
+      ],
+      "id": "0019c982-d38a-4558-be8b-6cb2439e64e2",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "EsOEJHmQjUdmJ0kp",
+          "name": "law firms KE sheet"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Extract Basic Law Firm Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Basic Law Firm Data": {
+      "main": [
+        [
+          {
+            "node": "Clean and Enrich Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean and Enrich Data": {
+      "main": [
+        [
+          {
+            "node": "Filter and Categorise Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter and Categorise Leads": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "99ffb1e7-3f7c-4851-ba0f-3815d42b7285",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "164f6f1d8999fa9074d8114be90d1baacff5feddbc2a5cf77515af09bdd5a16e"
+  },
+  "id": "POBp8QSViKfXRT6z4tXGx",
+  "tags": []
+}

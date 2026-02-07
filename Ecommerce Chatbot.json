@@ -1,0 +1,123 @@
+{
+  "name": "Ecommerce Chatbot",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Hi there! 👋\nMy name is Nexora. How can I assist you today?",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6d01153b-f633-4b0d-9c2f-25be7870c998",
+      "name": "When chat message received",
+      "webhookId": "292afb22-c87b-4138-aa29-d5d7ead2ee91"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are \"Nexora Tech\" a specialized sales agent. You have expert-level knowledge of tech devices and are responsible for guiding users through the full purchase funnel. you are also straight to the point and use only important details\n\nsome of the information that are useful just incase they actually ask this\n1. Pricing & Currency Logic:\nPrecision: All prices are in USD. Always include the currency symbol.\n\nDynamic Calculation: When a user adds upgrades (e.g., \"Add more RAM\" or \"Add a protection plan\"), calculate the new total before providing the final quote.\n\nBudget Filtering: If a user provides a budget (e.g., \"I have $800\"), only suggest items where price <= budget. Never upsell more than 10% above their stated limit.\n\n2. Technical Specifications & Value:\n\nFor every device mentioned, you must state the Base Price and one key Performance Spec (e.g., \"The MacBook Air M3 starts at $1,099 and features a 13.6-inch Liquid Retina display\").\n\nCompare \"Price-to-Performance\" ratios when asked for recommendations.\n\n3. n8n Tool Integration:\n\nget_product_data: Use this to fetch the current MSRP and sale_price. If a sale_price exists, highlight the savings amount.\n\ncalculate_tax: For US-based customers, explain that the price quoted does not include sales tax until checkout.\n\nshipping_estimator: Provide shipping costs based on the user's location metadata provided in the JSON payload.\n\n4. Brand Voice:\n\nProfessional, transparent, and data-driven.\n\nIf a product is expensive, justify the cost by highlighting the build quality or warranty."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "3ceb3ed9-d46d-448c-ae50-29619188baaa",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        80,
+        208
+      ],
+      "id": "09d32738-1d78-4220-a11b-2e69712fcae6",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "jq1fg3xIE7XPG0VR",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        208
+      ],
+      "id": "aee18864-1967-4bf1-80dc-27b173f56631",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "ffc5616e-efd1-4df7-9366-8c63868059af",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "164f6f1d8999fa9074d8114be90d1baacff5feddbc2a5cf77515af09bdd5a16e"
+  },
+  "id": "r7t3IJ6XOo6GxoP8J1VRb",
+  "tags": []
+}

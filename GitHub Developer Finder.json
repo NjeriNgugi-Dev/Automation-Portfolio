@@ -1,0 +1,388 @@
+{
+  "name": "GitHub Developer Finder",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "={{$json.userApiUrl}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            },
+            {
+              "name": "user-agent",
+              "value": "n8n-bot"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 10,
+              "batchInterval": 2000
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        240,
+        -96
+      ],
+      "id": "17736168-0c32-4238-a8e6-285fdc21e8e6",
+      "name": "Users Full Profile",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SHtHFRDUnCIadQBH",
+          "name": "Header Auth account 7"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract users from GitHub search results\nconst searchResults = $input.item.json;\nconst users = searchResults.items || [];\n\n// Process each user\nconst processedUsers = users.map(user => ({\n  json: {\n    username: user.login,\n    githubId: user.id,\n    avatarUrl: user.avatar_url,\n    profileUrl: user.html_url,\n    userApiUrl: user.url,\n    accountType: user.type,\n    scrapedDate: new Date().toISOString()\n  }\n}));\n\nreturn processedUsers;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        -96
+      ],
+      "id": "e3f8e8ec-e99b-428c-ac43-391bc8513a9d",
+      "name": "Process Search Results"
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/search/users?q=location:kenya+followers:>10&per_page=30",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n-bot"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -160,
+        -96
+      ],
+      "id": "528da2b8-9673-46f9-8b8a-56b5881d5eba",
+      "name": "GitHub Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Clean and structure developer data\nconst profileData = $input.item.json;\n\n// Calculate account age\nconst accountAge = profileData.created_at \n  ? ((new Date() - new Date(profileData.created_at)) / (1000 * 60 * 60 * 24 * 365)).toFixed(1)\n  : 0;\n\nconst developer = {\n  json: {\n    // Personal Info\n    name: profileData.name || profileData.login,\n    username: profileData.login,\n    email: profileData.email || '',\n    bio: profileData.bio || '',\n    \n    // Location\n    location: profileData.location || '',\n    company: profileData.company || '',\n    \n    // Links\n    githubUrl: profileData.html_url,\n    websiteUrl: profileData.blog || '',\n    twitterUsername: profileData.twitter_username || '',\n    avatarUrl: profileData.avatar_url,\n    \n    // Stats\n    publicRepos: profileData.public_repos || 0,\n    followers: profileData.followers || 0,\n    following: profileData.following || 0,\n    \n    // Status\n    hireable: profileData.hireable || false,\n    accountAgeYears: accountAge,\n    \n    // Meta\n    platform: 'GitHub',\n    scrapedDate: new Date().toISOString()\n  }\n};\n\nreturn developer;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -96
+      ],
+      "id": "6bcb4924-0036-46fd-a498-c7b0528a30fa",
+      "name": "Clean and Structure Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Score each developer as a lead\nconst dev = $input.item.json;\n\nlet score = 0;\n\n// Scoring system\nif (dev.email) score += 15;\nif (dev.followers > 100) score += 20;\nelse if (dev.followers > 50) score += 15;\nelse if (dev.followers > 20) score += 10;\nelse if (dev.followers > 10) score += 5;\n\nif (dev.publicRepos > 50) score += 20;\nelse if (dev.publicRepos > 20) score += 15;\nelse if (dev.publicRepos > 10) score += 10;\nelse if (dev.publicRepos > 5) score += 5;\n\nif (dev.bio && dev.bio.length > 20) score += 10;\nif (dev.websiteUrl) score += 10;\nif (dev.hireable) score += 15;\n\nif (dev.accountAgeYears > 3) score += 10;\nelse if (dev.accountAgeYears > 1) score += 5;\n\n// Determine quality\nlet leadQuality = 'Low';\nif (score >= 70) leadQuality = 'High';\nelse if (score >= 50) leadQuality = 'Medium';\n\n// Determine experience\nlet experienceLevel = 'Junior';\nif (dev.publicRepos > 30 && dev.followers > 50 && dev.accountAgeYears > 2) {\n  experienceLevel = 'Senior';\n} else if (dev.publicRepos > 15 && dev.followers > 20) {\n  experienceLevel = 'Mid-Level';\n}\n\nreturn {\n  json: {\n    ...dev,\n    leadScore: score,\n    leadQuality: leadQuality,\n    experienceLevel: experienceLevel,\n    hasContactInfo: !!(dev.email || dev.websiteUrl || dev.twitterUsername),\n    readyToContact: !!(dev.email && dev.hireable)\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        -96
+      ],
+      "id": "8240a14b-ccec-433b-b3f5-88c33a21006c",
+      "name": "LeaD Score"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1jG-NEBhrLsJg0P1ehifNg9OdNivBsF1o8sc5uvYh2HE",
+          "mode": "list",
+          "cachedResultName": "GitHub Developer Finder",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jG-NEBhrLsJg0P1ehifNg9OdNivBsF1o8sc5uvYh2HE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jG-NEBhrLsJg0P1ehifNg9OdNivBsF1o8sc5uvYh2HE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.name }}",
+            "Username": "={{ $json.username }}",
+            "Email": "={{ $json.email }}",
+            "Location": "={{ $json.location }}",
+            "Company": "={{ $json.company }}",
+            "GitHub URL": "={{ $json.githubUrl }}",
+            "Website URL": "={{ $json.websiteUrl }}",
+            "Hireable": "={{ $json.hireable }}",
+            "Experience Level": "={{ $json.experienceLevel }}",
+            "Lead Quality": "={{ $json.leadQuality }}",
+            "Has Contact Info": "={{ $json.hasContactInfo }}",
+            "Read to Contact": "={{ $json.readyToContact }}",
+            "Lead Score": "={{ $json.leadScore }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Username",
+              "displayName": "Username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "GitHub URL",
+              "displayName": "GitHub URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website URL",
+              "displayName": "Website URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Experience Level",
+              "displayName": "Experience Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Quality",
+              "displayName": "Lead Quality",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Hireable",
+              "displayName": "Hireable",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Has Contact Info",
+              "displayName": "Has Contact Info",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Read to Contact",
+              "displayName": "Read to Contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -368,
+        160
+      ],
+      "id": "e1c8f227-324a-406c-8d2e-65b1293a75bb",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dpVzuABQPstAybEw",
+          "name": "Github Devs"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -368,
+        -96
+      ],
+      "id": "8aedd21b-4f55-4f4c-b362-af087c7dcfac",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Process Search Results": {
+      "main": [
+        [
+          {
+            "node": "Users Full Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub Data": {
+      "main": [
+        [
+          {
+            "node": "Process Search Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Users Full Profile": {
+      "main": [
+        [
+          {
+            "node": "Clean and Structure Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean and Structure Data": {
+      "main": [
+        [
+          {
+            "node": "LeaD Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LeaD Score": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "GitHub Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "cd20240b-ff75-4bbe-89d3-e5072106ec24",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "164f6f1d8999fa9074d8114be90d1baacff5feddbc2a5cf77515af09bdd5a16e"
+  },
+  "id": "GbC4uyieCg_Haw-LW-Tgs",
+  "tags": []
+}

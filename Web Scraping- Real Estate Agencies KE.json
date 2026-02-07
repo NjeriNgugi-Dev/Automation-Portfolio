@@ -1,0 +1,319 @@
+{
+  "name": "Web Scraping- Real Estate Agencies KE",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://www.buyrentkenya.com/estate-agents",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        32,
+        -160
+      ],
+      "id": "966bd45a-c2fa-4448-82a1-b9042db52199",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        -160
+      ],
+      "id": "a0ab3046-b5cd-4626-9f1d-93362e342d2f",
+      "name": "Wait",
+      "webhookId": "61410448-0d6e-4d75-9876-fa2f7e0309d7"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the HTML\nconst html = $input.all()[0].json.data;\n\n// Find all unique agent profile URLs\nconst agencies = [];\nconst seen = new Set();\n\n// Pattern 1: Look for /estate-agent/company-name links\nconst pattern1 = /href=\"(\\/estate-agent\\/[^\"]+)\"/g;\nlet match;\n\nwhile ((match = pattern1.exec(html)) !== null) {\n  const path = match[1];\n  const fullUrl = 'https://www.buyrentkenya.com' + path;\n  \n  // Only add unique URLs\n  if (!seen.has(fullUrl)) {\n    seen.add(fullUrl);\n    agencies.push({\n      profileUrl: fullUrl\n    });\n  }\n}\n\n// Pattern 2: Also look for full URLs to buyrentkenya agent pages\nconst pattern2 = /href=\"(https:\\/\\/www\\.buyrentkenya\\.com\\/estate-agent\\/[^\"]+)\"/g;\nwhile ((match = pattern2.exec(html)) !== null) {\n  const fullUrl = match[1];\n  \n  if (!seen.has(fullUrl)) {\n    seen.add(fullUrl);\n    agencies.push({\n      profileUrl: fullUrl\n    });\n  }\n}\n\nconsole.log(`Found ${agencies.length} unique agency profiles`);\n\n// Return first 10 for testing (remove .slice(0, 10) later to get all)\nreturn agencies.slice(0, 10).map(agency => ({ json: agency }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -160
+      ],
+      "id": "78c88e35-ae9f-429d-9898-1fc177b1e9fe",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1JcFFTg9JK2RyrlrfO9GoVzwmstPk4BASzDQbceCkP94",
+          "mode": "list",
+          "cachedResultName": "Kenya Real Estate Agents- Pratice ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JcFFTg9JK2RyrlrfO9GoVzwmstPk4BASzDQbceCkP94/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1JcFFTg9JK2RyrlrfO9GoVzwmstPk4BASzDQbceCkP94/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Agent Name": "={{ $json.agentName }}",
+            "Phone Number": "={{ $json.phoneNumber }}",
+            "Location": "={{ $json.location }}",
+            "Website": "={{ $json.profileUrl }}",
+            "Email Address": "="
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Agent Name",
+              "displayName": "Agent Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Address",
+              "displayName": "Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Specialization",
+              "displayName": "Specialization",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Scraped",
+              "displayName": "Date Scraped",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        192,
+        96
+      ],
+      "id": "5eaec300-43f7-4007-bc92-51c8c517de8a",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "hCTPKOL7uqAvT4i0",
+          "name": "Google Sheets account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.profileUrl }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 5
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        656,
+        -160
+      ],
+      "id": "4bdb8eb7-edeb-43a7-ac97-7568839bb2e6",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code Node - STEP 1: Clean HTML (Remove Bulk)\n// Mode: \"Run Once for Each Item\"\n// This reduces HTML size by removing images, scripts, styles, etc.\n\n// Get the HTML from the current item\nconst html = $input.item.json.data;\n\n// Remove large/unnecessary elements\nlet cleanedHtml = html;\n\n// Remove script tags and their content\ncleanedHtml = cleanedHtml.replace(/<script\\b[^<]*(?:(?!<\\/script>)<[^<]*)*<\\/script>/gi, '');\n\n// Remove style tags and their content\ncleanedHtml = cleanedHtml.replace(/<style\\b[^<]*(?:(?!<\\/style>)<[^<]*)*<\\/style>/gi, '');\n\n// Remove inline styles\ncleanedHtml = cleanedHtml.replace(/\\sstyle=\"[^\"]*\"/gi, '');\n\n// Remove SVG tags (they're huge!)\ncleanedHtml = cleanedHtml.replace(/<svg\\b[^<]*(?:(?!<\\/svg>)<[^<]*)*<\\/svg>/gi, '');\n\n// Remove image tags (keep the structure but remove base64 data)\ncleanedHtml = cleanedHtml.replace(/<img[^>]*src=\"data:image[^\"]*\"[^>]*>/gi, '');\n\n// Remove comments\ncleanedHtml = cleanedHtml.replace(/<!--[\\s\\S]*?-->/g, '');\n\n// Remove multiple spaces/newlines\ncleanedHtml = cleanedHtml.replace(/\\s+/g, ' ');\n\n// Keep only what we need: title, meta, h1-h6, p, a, schema.org JSON\nconst essentialParts = [];\n\n// Extract title\nconst titleMatch = cleanedHtml.match(/<title[^>]*>.*?<\\/title>/i);\nif (titleMatch) essentialParts.push(titleMatch[0]);\n\n// Extract meta description\nconst metaMatch = cleanedHtml.match(/<meta\\s+name=\"description\"\\s+content=\"[^\"]*\"/i);\nif (metaMatch) essentialParts.push(metaMatch[0]);\n\n// Extract all h1-h6 tags\nconst headingMatches = cleanedHtml.match(/<h[1-6][^>]*>.*?<\\/h[1-6]>/gi);\nif (headingMatches) essentialParts.push(...headingMatches);\n\n// Extract schema.org JSON-LD (this has the good data!)\nconst schemaMatch = cleanedHtml.match(/<script type=\"application\\/ld\\+json\">.*?<\\/script>/is);\nif (schemaMatch) essentialParts.push(schemaMatch[0]);\n\n// Extract all paragraph text (but keep it short)\nconst paragraphMatches = cleanedHtml.match(/<p[^>]*>.*?<\\/p>/gi);\nif (paragraphMatches) {\n  // Only keep paragraphs that might have contact info\n  const relevantParagraphs = paragraphMatches.filter(p => {\n    return p.includes('@') || \n           p.includes('+254') || \n           p.includes('0') ||\n           p.includes('contact') ||\n           p.includes('phone') ||\n           p.includes('email');\n  });\n  essentialParts.push(...relevantParagraphs.slice(0, 20)); // Max 20 paragraphs\n}\n\n// Extract links (might have website)\nconst linkMatches = cleanedHtml.match(/<a[^>]*href=\"http[^\"]*\"[^>]*>/gi);\nif (linkMatches) {\n  essentialParts.push(...linkMatches.slice(0, 30)); // Max 30 links\n}\n\n// Combine essential parts\nconst minimalHtml = essentialParts.join('\\n');\n\n// Return cleaned HTML (much smaller now!)\nreturn {\n  profileUrl: $input.item.json.profileUrl,\n  data: minimalHtml,\n  originalSize: html.length,\n  cleanedSize: minimalHtml.length,\n  reduction: Math.round((1 - minimalHtml.length / html.length) * 100) + '%'\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        96
+      ],
+      "id": "13a2d71e-9363-4aa6-9830-b6b0a666e4bf",
+      "name": "CleanUp HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code Node - STEP 2: Extract Agent Data from Cleaned HTML\n// Mode: \"Run Once for Each Item\"\n// This runs AFTER the cleanup node\n\n// Get the cleaned HTML\nconst html = $input.item.json.data;\n\n// Initialize result\nlet agentData = {\n  agentName: 'Not available',\n  phoneNumber: 'Not available',\n  email: 'Not available',\n  website: 'Not available',\n  location: 'Not available',\n  profileUrl: $input.item.json.profileUrl || 'Not available',\n  listingsCount: 'Not available',\n  description: 'Not available',\n  dateScraped: new Date().toISOString()\n};\n\n// Helper function\nfunction stripHtml(text) {\n  return text.replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\n// ============================================\n// EXTRACT FROM SCHEMA.ORG (BEST SOURCE!)\n// ============================================\nconst schemaMatch = html.match(/<script type=\"application\\/ld\\+json\">(.*?)<\\/script>/is);\nif (schemaMatch) {\n  try {\n    const schemaData = JSON.parse(schemaMatch[1]);\n    \n    if (schemaData['@graph']) {\n      // Find RealEstateAgent\n      const agent = schemaData['@graph'].find(item => item['@type'] === 'RealEstateAgent');\n      \n      if (agent) {\n        // Get name\n        if (agent.name && !agent.name.includes('BuyRentKenya')) {\n          agentData.agentName = agent.name;\n        }\n        \n        // Get location from address\n        if (agent.address && agent.address['@id']) {\n          const addressId = agent.address['@id'];\n          const address = schemaData['@graph'].find(item => item['@id'] === addressId);\n          if (address) {\n            const parts = [address.addressLocality, address.addressRegion].filter(Boolean);\n            if (parts.length > 0) {\n              agentData.location = parts.join(', ');\n            }\n          }\n        }\n        \n        // Get listings count from offer catalog\n        if (agent.hasOfferCatalog && agent.hasOfferCatalog['@id']) {\n          const catalogId = agent.hasOfferCatalog['@id'];\n          const catalog = schemaData['@graph'].find(item => item['@id'] === catalogId);\n          if (catalog && catalog.itemListElement) {\n            agentData.listingsCount = catalog.itemListElement.length.toString();\n          }\n        }\n      }\n      \n      // Get phone from Organization\n      const org = schemaData['@graph'].find(item => \n        item['@type'] === 'Organization' && item.telephone\n      );\n      if (org && org.telephone) {\n        agentData.phoneNumber = org.telephone;\n      }\n      \n      // Get email from Organization\n      if (org && org.email) {\n        agentData.email = org.email;\n      }\n    }\n  } catch (e) {\n    // Schema parsing failed, continue to other methods\n  }\n}\n\n// ============================================\n// FALLBACK: Extract from title/meta\n// ============================================\n\n// Agent name from title\nif (agentData.agentName === 'Not available') {\n  const titleMatch = html.match(/<title[^>]*>([^<]+)/i);\n  if (titleMatch) {\n    const titleText = stripHtml(titleMatch[1]);\n    const nameMatch = titleText.match(/^(.+?)\\s*-\\s*Real Estate/);\n    if (nameMatch) {\n      agentData.agentName = nameMatch[1].trim();\n    }\n  }\n}\n\n// Location from title/meta\nif (agentData.location === 'Not available') {\n  const locationMatch = html.match(/Real Estate Agency in ([^<\"|]+)/i);\n  if (locationMatch) {\n    agentData.location = stripHtml(locationMatch[1]).trim();\n  }\n}\n\n// Description from meta\nconst descMatch = html.match(/<meta\\s+name=\"description\"\\s+content=\"([^\"]+)\"/i);\nif (descMatch) {\n  agentData.description = stripHtml(descMatch[1]).substring(0, 150);\n}\n\n// ============================================\n// Extract phone number from text\n// ============================================\nif (agentData.phoneNumber === 'Not available') {\n  const cleanText = stripHtml(html);\n  const phonePatterns = [\n    /\\+254\\s*\\d{9,10}/,\n    /\\+254\\d{9,10}/,\n    /0\\d{9,10}/\n  ];\n  \n  for (const pattern of phonePatterns) {\n    const match = cleanText.match(pattern);\n    if (match) {\n      let phone = match[0].replace(/\\s/g, '');\n      if (phone.startsWith('0')) {\n        phone = '+254' + phone.substring(1);\n      }\n      agentData.phoneNumber = phone;\n      break;\n    }\n  }\n}\n\n// ============================================\n// Extract email from text\n// ============================================\nif (agentData.email === 'Not available') {\n  const cleanText = stripHtml(html);\n  const emailMatch = cleanText.match(/\\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}\\b/);\n  if (emailMatch) {\n    const email = emailMatch[0];\n    if (!email.toLowerCase().includes('buyrentkenya')) {\n      agentData.email = email;\n    }\n  }\n}\n\n// ============================================\n// Extract website from links\n// ============================================\nconst hrefPattern = /href=\"(https?:\\/\\/[^\"]+)\"/gi;\nlet match;\n\nwhile ((match = hrefPattern.exec(html)) !== null) {\n  const url = match[1];\n  const lower = url.toLowerCase();\n  \n  // Skip buyrentkenya and social media\n  if (!lower.includes('buyrentkenya.com') &&\n      !lower.includes('facebook.com') &&\n      !lower.includes('twitter.com') &&\n      !lower.includes('instagram.com') &&\n      !lower.includes('linkedin.com') &&\n      !lower.includes('google.com') &&\n      !lower.includes('whatsapp.com')) {\n    agentData.website = url;\n    break;\n  }\n}\n\n// ============================================\n// Extract listings count from text\n// ============================================\nif (agentData.listingsCount === 'Not available') {\n  const listingsMatch = html.match(/(\\d+)\\s+listing/i);\n  if (listingsMatch) {\n    agentData.listingsCount = listingsMatch[1];\n  }\n}\n\nreturn agentData;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        96
+      ],
+      "id": "6e29dc33-813e-460e-aade-3abfc2476967",
+      "name": "Extract Agent Data"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 3
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -192,
+        -160
+      ],
+      "id": "c593ef74-ae3e-4711-bb84-0f71c49be273",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "CleanUp HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CleanUp HTML": {
+      "main": [
+        [
+          {
+            "node": "Extract Agent Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Agent Data": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "43f37913-db28-45c9-aba2-a501b965d897",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "164f6f1d8999fa9074d8114be90d1baacff5feddbc2a5cf77515af09bdd5a16e"
+  },
+  "id": "_LYs_Qs01OxktMXiJclby",
+  "tags": []
+}
